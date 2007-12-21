@@ -13,11 +13,16 @@ module ActsAsUrlParam
       options[:column] = args.first || 'url_name'
       raise ArgumentError, "Column does not exist" unless column_names.include? options[:column].to_s
       options[:from] ||= default_from_column
-      raise ArgumentError, "No columns found to use for setting the url_param" unless column_or_method_exists? options[:from]
+      
+      # This won't work, as the from could be a method, and it would have to be defined before acts_as_url_param
+      # raise ArgumentError, "No columns found to use for setting the url_param" unless column_or_method_exists? options[:from]
       options[:on] ||= :create
       options[:block] = block if block_given?
       callback = "before_validation"
-      callback += "_on_create" if options[:on] == :create
+      if options[:on] == :create
+        callback += "_on_create"
+        before_validation :set_url_param_if_non_existant
+      end
       send callback, :set_url_param
       extend ClassMethods
       include InstanceMethods
@@ -90,17 +95,29 @@ module ActsAsUrlParam
       end
       
       def to_param
-        read_attribute acts_as_url_options[:column]
+        url_param || id.to_s
+      end
+      
+      def url_param
+        read_attribute(acts_as_url_options[:column])
       end
       
       def empty_param?
-        !to_param
+        !url_param
       end
       
       private
       
+      def set_url_param_if_non_existant
+        unless new_record?
+          set_url_param if url_param.blank?
+        end
+      end
+      
       def set_url_param
-        write_attribute(acts_as_url_options[:column], compute_url_param) unless !read_attribute(acts_as_url_options[:column]).blank? and acts_as_url_options[:on] == :create
+        if url_param.blank? or acts_as_url_options[:on] != :create
+          write_attribute(acts_as_url_options[:column], compute_url_param)
+        end
         @url_param_validated = true
       end
       

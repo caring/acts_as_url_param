@@ -22,6 +22,13 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert_equal('test-this', item.to_param)
   end
   
+  def test_should_set_url_name_if_blank
+    item = ActsAsUrlParam::Item.create(:name => 'no url param')
+    item.send(:write_attribute, :url_name, nil)
+    item.save
+    assert item.url_name
+  end
+  
   def test_should_make_custom_urls_safe
     ActsAsUrlParam::Item.any_instance.expects(:url_safe)
     ActsAsUrlParam::Item.new(:url_name => 'make me safe')
