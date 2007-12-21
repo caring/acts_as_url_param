@@ -43,18 +43,6 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert !user.valid?
   end
   
-  def test_should_raise_error_without_from_column
-    assert_raises ArgumentError do
-      acts_as_url_name_model(nil, :from => :no_name)
-    end
-  end
-  
-  def test_should_raise_error_without_url_name_column
-    assert_raises ArgumentError do
-      acts_as_url_name_model(:no_url_name)
-    end
-  end
-  
   def test_should_check_if_url_param_available
     ActsAsUrlParam::User.create(:login => 'tester')
     assert !ActsAsUrlParam::User.url_param_available?('tester')
