@@ -11,7 +11,6 @@ module ActsAsUrlParam
       options = args.respond_to?(:extract_options!) ? args.extract_options! : extract_options_from_args!(args)
       self.acts_as_url_options = options
       options[:column] = args.first || 'url_name'
-      raise ArgumentError, "Column does not exist" unless column_names.include? options[:column].to_s
       options[:from] ||= default_from_column
       
       # This won't work, as the from could be a method, and it would have to be defined before acts_as_url_param
