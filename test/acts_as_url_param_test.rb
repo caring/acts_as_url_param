@@ -43,6 +43,11 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert !user.valid?
   end
   
+  def test_should_allow_blank_url_param_if_specified
+    item = ActsAsUrlParam::Story.create
+    assert item.valid?
+  end
+  
   def test_should_check_if_url_param_available
     ActsAsUrlParam::User.create(:login => 'tester')
     assert !ActsAsUrlParam::User.url_param_available?('tester')

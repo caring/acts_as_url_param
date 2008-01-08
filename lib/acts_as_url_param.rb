@@ -27,7 +27,7 @@ module ActsAsUrlParam
       include InstanceMethods
       include Caring::Utilities::UrlUtils
       extend Caring::Utilities::UrlUtils
-      validates_presence_of options[:from], :if => :empty_param?
+      validates_presence_of(options[:from], :if => :empty_param?) unless options[:allow_blank]
       self.acts_as_url_options = options
       self.class_eval do
         define_method("#{options[:column]}=") do |value|
