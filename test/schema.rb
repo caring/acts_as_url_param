@@ -1,6 +1,7 @@
 ActiveRecord::Schema.define() do
   create_table :authors do |t|
     t.column :label, :string
+    t.column :bio, :string
     t.column :url_name, :string
   end
   

@@ -80,6 +80,13 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     author.update_attributes(:label => 'a new author')
     assert_not_equal(author_url, author.to_param)
   end
+  
+  def test_should_not_update_url_name_on_custom_callback_when_no_change
+    author = ActsAsUrlParam::Author.create(:label => 'name of author')
+    author_url = author.to_param
+    author.update_attributes(:bio => 'unrelated to url param')
+    assert_equal(author_url, author.to_param)
+  end
 
   def test_should_not_update_url_name_by_default
     item = ActsAsUrlParam::Item.create(:name => 'this is a url param')

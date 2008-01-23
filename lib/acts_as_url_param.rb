@@ -75,10 +75,10 @@ module ActsAsUrlParam
         end
       end
       
-      def compute_url_param(candidate)
+      def compute_url_param(candidate, id=nil)
         return if candidate.blank?
         # raise ArgumentError, "The url canidate cannot be empty" if candidate.blank?
-        uniquify_proc = acts_as_url_options[:block] || Proc.new { |candidate| url_param_available? candidate }
+        uniquify_proc = acts_as_url_options[:block] || Proc.new { |candidate| url_param_available? candidate, id }
         uniquify(url_safe(candidate), &uniquify_proc)
       end
     end
@@ -86,7 +86,7 @@ module ActsAsUrlParam
     module InstanceMethods
       def compute_url_param
         # raise ArgumentError, "The column used for generating the url_param is empty" unless url_from
-        self.class.compute_url_param(url_from)
+        self.class.compute_url_param(url_from, id)
       end
       
       def url_from
