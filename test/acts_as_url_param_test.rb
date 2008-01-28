@@ -87,6 +87,13 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     author.update_attributes(:bio => 'unrelated to url param')
     assert_equal(author_url, author.to_param)
   end
+  
+  def test_should_not_set_existing_url_name_to_blank
+    author = ActsAsUrlParam::Author.create(:label => 'name of author')
+    author_url = author.to_param
+    author.update_attributes(:label => '')
+    assert_equal(author_url, author.to_param)
+  end
 
   def test_should_not_update_url_name_by_default
     item = ActsAsUrlParam::Item.create(:name => 'this is a url param')

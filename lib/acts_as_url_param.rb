@@ -115,7 +115,8 @@ module ActsAsUrlParam
       
       def set_url_param
         if url_param.blank? or acts_as_url_options[:on] != :create
-          write_attribute(acts_as_url_options[:column], compute_url_param)
+          url = compute_url_param
+          write_attribute(acts_as_url_options[:column], url) unless url.blank?
         end
         @url_param_validated = true
       end
