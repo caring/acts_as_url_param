@@ -35,6 +35,9 @@ end
 
 ActiveRecord::Base.connected? ? keep_connection_and_load_schema.call : load_schema.call
 
+require "redirect"
+Redirect.connection = ACTS_AS_URL_PARAM_TEST_DB
+
 class Test::Unit::TestCase #:nodoc:
   def create_fixtures(*table_names)
     if block_given?
