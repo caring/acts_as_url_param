@@ -55,7 +55,7 @@ module ActsAsUrlParam
       end
       
       meta_def :find_redirect do |name|
-        redirect = Redirect.find(:all, :conditions => ["redirectable_class = ? AND url_name = ?", self.class.to_s, name])
+        redirect = Redirect.find(:first, :conditions => ["redirectable_class = ? AND url_name = ?", self.to_s, name])
         redirect.redirectable if redirect
       end
     end
@@ -69,7 +69,7 @@ module ActsAsUrlParam
     def define_url_param_setter
       class_def "#{acts_as_url_options[:column]}=" do |value|
         @url_name_manually_set = true if value
-        @old_name = read_attribute(acts_as_url_options[:column])
+        @old_name = read_attribute(acts_as_url_options[:column]) unless @name_changed
         write_attribute(acts_as_url_options[:column], url_safe(value))
         @name_changed = true unless read_attribute(acts_as_url_options[:column]) == @old_name || !@old_name
       end
@@ -162,9 +162,9 @@ module ActsAsUrlParam
         if url_param.blank? or (acts_as_url_options[:on] != :create && !@url_name_manually_set)
           url = compute_url_param
           send("#{acts_as_url_options[:column]}=", url) unless url.blank?
+          @url_name_manually_set = false
+          @url_param_validated = true
         end
-        @url_name_manually_set = false
-        @url_param_validated = true
       end
       
       def validate_with_unique_url

@@ -27,6 +27,11 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert_equal('test-this', item.to_param)
   end
   
+  def test_should_make_manually_set_urls_safe
+    item = ActsAsUrlParam::Item.create(:name => 'test a manual url param', :url_name => 'test this one')
+    assert_equal('test-this-one', item.to_param)
+  end
+  
   def test_should_set_url_name_if_blank
     item = ActsAsUrlParam::Item.create(:name => 'no url param')
     item.send(:write_attribute, :url_name, nil)
@@ -78,9 +83,27 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     url = item.url_name
     assert_equal 0, item.redirects.size
     item.update_attributes :name => "redirect to me"
-    item.reload
     assert_equal 1, item.redirects.count
     assert_equal url, item.redirects.first.url_name
+  end
+  
+  def test_should_create_redirect_trail_with_manual_url
+    name = "this is another redirectable item"
+    item = ActsAsUrlParam::Item.create(:name => name)
+    url = item.url_name
+    assert_equal 0, item.redirects.size
+    item.update_attributes :url_name => "a-new-url-for-you"
+    assert_equal 1, item.redirects.count
+    assert_equal url, item.redirects.first.url_name
+  end
+  
+  def test_should_find_from_url_trail
+    name = "this is a redirectable item"
+    item = ActsAsUrlParam::Item.create(:name => name)
+    url = item.url_name
+    item.update_attributes :name => "redirect to me"
+    assert item.to_param != url
+    assert_equal item, ActsAsUrlParam::Item.find_redirect(url)
   end
   
   def test_should_check_redirects_table_for_available_names
