@@ -55,7 +55,7 @@ module ActsAsUrlParam
       end
       
       meta_def :find_redirect do |name|
-        redirect = Redirect.find(:first, :conditions => ["redirectable_class = ? AND url_name = ?", self.to_s, name], :order => "created_at desc")
+        redirect = Redirect.find_by_class_and_name(self,name)
         redirect.redirectable if redirect
       end
     end
