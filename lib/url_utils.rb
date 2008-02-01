@@ -15,7 +15,7 @@ module Caring
       def url_safe(s, options = {})
         s = s.downcase if options.fetch(:downcase, true)
         collapse = options.fetch(:collapse, true)
-        default_regex = /[^'a-zA-Z0-9-]#{"+" if collapse}/
+        default_regex = /[^'a-zA-Z0-9]#{"+" if collapse}/
         replacements = options[:replacements] || { options.fetch(:char,"-") => default_regex, "" => /'#{"+" if collapse}/}
         replacements.each do |replacement, regex|
           s = s.gsub(regex,replacement)

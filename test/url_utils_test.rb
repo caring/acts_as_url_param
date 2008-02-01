@@ -5,6 +5,7 @@ class UrlUtilsTest < Test::Unit::TestCase
   
   def test_url_safe
     assert_equal "a1-b-z", url_safe("a1 b@ _Z!")
+    assert_equal "a1-b-z", url_safe("a1 b@ - Z!")
     assert_equal 'a1#b#_Z', url_safe('a1 b@ _Z', :replacements => { '#', /[^a-zA-Z0-9_-]+/}, :downcase => false)
     assert_equal 'a1-b2---z9', url_safe('a1 b2   z9', :collapse => false)
     assert_equal 'a1_b2___z9', url_safe('a1 b2   z9', :char => '_', :collapse => false)
