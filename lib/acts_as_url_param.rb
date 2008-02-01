@@ -49,7 +49,7 @@ module ActsAsUrlParam
       before_save :add_redirect
       
       class_def :add_redirect do
-        if @name_changed && @old_name
+        if !new_record? && @name_changed && @old_name
           redirects.create(:url_name => @old_name)
         end
       end
