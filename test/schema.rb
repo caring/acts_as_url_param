@@ -21,7 +21,7 @@ ActiveRecord::Schema.define() do
     t.column :redirectable_id, :integer
     t.column :redirectable_class, :string
     t.column :url_name, :string
-		t.column :created_at, :timestamp
+    t.column :created_at, :timestamp
   end
   
   create_table :stories do |t|

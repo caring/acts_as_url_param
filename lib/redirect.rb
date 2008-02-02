@@ -11,6 +11,10 @@ class Redirect < ActiveRecord::Base
     find(:first, :conditions => ["redirectable_class = ? AND url_name = ?", klass.to_s, name], :order => "created_at desc")
   end
   
+  def to_label
+    url_name
+  end
+  
   private
   def set_real_class
     self.redirectable_class = redirectable.class.to_s
