@@ -13,11 +13,6 @@ require "story"
 
 class ActsAsUrlParamTest < Test::Unit::TestCase
   
-  def test_should_define_finder
-    item = ActsAsUrlParam::Item.create(:name => 'just try and find me')
-    assert_equal item, ActsAsUrlParam::Item.find_by_url(item.to_param)
-  end
-  
   def test_should_set_url_name_on_create
     assert !ActsAsUrlParam::Item.create(:name => 'test a url param').url_name.blank?
   end
@@ -72,26 +67,6 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert_not_equal new_post.compute_url_param, story.to_param
   end
   
-  def test_should_create_redirect_trail
-    name = "this is a redirectable item"
-    item = ActsAsUrlParam::Item.create(:name => name)
-    url = item.url_name
-    assert_equal 0, item.redirects.size
-    item.update_attributes :name => "redirect to me"
-    item.reload
-    assert_equal 1, item.redirects.count
-    assert_equal url, item.redirects.first.url_name
-  end
-  
-  def test_should_check_redirects_table_for_available_names
-    name = "this is a redirectable item"
-    item = ActsAsUrlParam::Book.create(:name => name)
-    url = item.url_name
-    item.update_attributes(:name => "second one")
-    assert !ActsAsUrlParam::Book.url_param_available?(url)
-    assert ActsAsUrlParam::Magazine.url_param_available?(url)
-  end
-  
   def test_should_compute_url_name
     name = 'this is a url param'
     item = ActsAsUrlParam::Item.new(:name => name)
@@ -121,7 +96,7 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
   end
 
   def test_should_not_update_url_name_by_default
-    item = ActsAsUrlParam::Newspaper.create(:name => 'this is a url param')
+    item = ActsAsUrlParam::Item.create(:name => 'this is a url param')
     item_url = item.to_param
     item.update_attributes(:name => 'not updated')
     assert_equal(item_url, item.to_param)

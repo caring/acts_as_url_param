@@ -16,13 +16,6 @@ ActiveRecord::Schema.define() do
     t.column :url_name, :string
   end
   
-  create_table :redirects do |t|
-    t.column :redirectable_type, :string
-    t.column :redirectable_id, :integer
-    t.column :redirectable_class, :string
-    t.column :url_name, :string
-  end
-  
   create_table :stories do |t|
     t.column :title, :string
     t.column :story_url, :string

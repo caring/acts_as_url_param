@@ -6,11 +6,6 @@ module ActsAsUrlParam
   module ActMethods
     
     def acts_as_url_param(*args, &block)
-      extend ClassMethods
-      include InstanceMethods
-      include Caring::Utilities::UrlUtils
-      extend Caring::Utilities::UrlUtils
-      
       class_inheritable_accessor :acts_as_url_options, :acts_as_url_param_base
       # No extract options in rails 1.2.x
       options = args.respond_to?(:extract_options!) ? args.extract_options! : extract_options_from_args!(args)
@@ -18,11 +13,8 @@ module ActsAsUrlParam
       options[:column] = args.first || 'url_name'
       options[:from] ||= default_from_column
       
-      if options[:redirectable]
-        options[:on] ||= :update
-        make_redirectable
-      end
-      
+      # This won't work, as the from could be a method, and it would have to be defined before acts_as_url_param
+      # raise ArgumentError, "No columns found to use for setting the url_param" unless column_or_method_exists? options[:from]
       options[:on] ||= :create
       options[:block] = block if block_given?
       callback = "before_validation"
@@ -31,76 +23,39 @@ module ActsAsUrlParam
         before_validation :set_url_param_if_non_existant
       end
       send callback, :set_url_param
+      extend ClassMethods
+      include InstanceMethods
+      include Caring::Utilities::UrlUtils
+      extend Caring::Utilities::UrlUtils
       validates_presence_of(options[:from], :if => :empty_param?) unless options[:allow_blank]
-      
-      define_finder
-      define_url_param_setter
-      define_availability_check
-      
+      self.acts_as_url_options = options
       self.class_eval do
+        define_method("#{options[:column]}=") do |value|
+          write_attribute(options[:column], url_safe(value))
+        end
+        
         alias_method_chain :validate, :unique_url unless method_defined? :validate_without_unique_url
+      end
+      klass = self
+      (class << self; self; end).module_eval do
+        define_method(:url_param_available_for_model?) do |*args|
+          candidate, id = *args
+          conditions = acts_as_url_options[:conditions] + ' AND ' if acts_as_url_options[:conditions]
+          conditions ||= '' 
+          conditions += "#{acts_as_url_options[:column]} = ?"
+          conditions += " AND id != ?" if id
+          conditions = [conditions, candidate]
+          conditions << id if id
+          if descends_from_active_record? or self == klass
+            count(:conditions => conditions) == 0
+          else
+            base_class.count(:conditions => conditions) == 0
+          end
+        end
       end
     end
     
     private
-    
-    def make_redirectable
-      has_many :redirects, :as => :redirectable
-      before_save :add_redirect
-      
-      class_def :add_redirect do
-        if @name_changed && @old_name
-          redirects.create(:url_name => @old_name)
-        end
-      end
-      
-      meta_def :find_redirect do |name|
-        redirect = Redirect.find(:all, :conditions => ["redirectable_class = ? AND url_name = ?", self.class.to_s, name])
-        redirect.redirectable if redirect
-      end
-    end
-    
-    def define_finder
-      meta_def :find_by_url do |*args|
-        send("find_by_#{acts_as_url_options[:column]}", *args)
-      end
-    end
-    
-    def define_url_param_setter
-      class_def "#{acts_as_url_options[:column]}=" do |value|
-        @url_name_manually_set = true if value
-        @old_name = read_attribute(acts_as_url_options[:column])
-        write_attribute(acts_as_url_options[:column], url_safe(value))
-        @name_changed = true unless read_attribute(acts_as_url_options[:column]) == @old_name || !@old_name
-      end
-    end
-    
-    def define_availability_check
-      klass = self
-      meta_def :url_param_available_for_model? do |*args|
-        candidate, id = *args
-        conditions = acts_as_url_options[:conditions] + ' AND ' if acts_as_url_options[:conditions]
-        conditions ||= '' 
-        conditions += "#{acts_as_url_options[:column]} = ?"
-        conditions += " AND id != ?" if id
-        conditions = [conditions, candidate]
-        conditions << id if id
-        available = if descends_from_active_record? or self == klass
-          count(:conditions => conditions) == 0
-        else
-          base_class.count(:conditions => conditions) == 0
-        end
-        if acts_as_url_options[:redirectable] && available
-          re_conditions = "url_name = ? AND redirectable_class = ?"
-          re_conditions += "AND redirectable_id != ?" if id
-          re_conditions = [re_conditions, candidate, self.to_s]
-          re_conditions << id if id
-          available = Redirect.count(:conditions => re_conditions) == 0
-        end
-        available
-      end
-    end
-    
     def default_from_column
       %W(name label title).detect do |column_name|
         column_or_method_exists?(column_name) and self.acts_as_url_options[:to].to_s != column_name
@@ -159,11 +114,10 @@ module ActsAsUrlParam
       end
       
       def set_url_param
-        if url_param.blank? or (acts_as_url_options[:on] != :create && !@url_name_manually_set)
+        if url_param.blank? or acts_as_url_options[:on] != :create
           url = compute_url_param
-          send("#{acts_as_url_options[:column]}=", url) unless url.blank?
+          write_attribute(acts_as_url_options[:column], url) unless url.blank?
         end
-        @url_name_manually_set = false
         @url_param_validated = true
       end
       
