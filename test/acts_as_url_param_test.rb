@@ -10,6 +10,7 @@ require "magazine"
 require "newspaper"
 require "user"
 require "story"
+require "before_item"
 
 class ActsAsUrlParamTest < Test::Unit::TestCase
   
@@ -150,6 +151,14 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
     assert_equal(item_url, item.to_param)
   end
   
+  def test_should_work_with_two_items_of_same_name
+    name = "just another name"
+    item = ActsAsUrlParam::Item.create(:name => name)
+    url = item.to_param
+    item.update_attributes(:content => "irrelevant")
+    assert_equal url, item.to_param
+  end
+  
   def test_should_work_with_sti
     item = ActsAsUrlParam::Item.create(:name => 'an item')
     book = ActsAsUrlParam::Book.create(:name => 'an item')
@@ -165,6 +174,16 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
   def test_should_use_method_for_url_from_if_exists
     magazine = ActsAsUrlParam::Magazine.create()
     assert !magazine.to_param.blank?
+  end
+  
+  def test_should_run_before_method_if_passed
+    ActsAsUrlParam::BeforeItem.any_instance.expects(:set_name)
+    item = ActsAsUrlParam::BeforeItem.create(:name => 'the name')
+  end
+  
+  def test_should_run_before_method_before_setting_url
+    item = ActsAsUrlParam::BeforeItem.create(:name => 'the name')
+    assert_match /is-set/, item.to_param
   end
   
   private  
