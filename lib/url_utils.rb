@@ -13,6 +13,7 @@ module Caring
       #   :strip_endings - remove replacement characters from the beginning and end of the safe string. Defaults to true.
       #   :downcase - make the input string lower case. Defautls to true.
       def url_safe(s, options = {})
+        return s if s.blank?
         s = s.downcase if options.fetch(:downcase, true)
         collapse = options.fetch(:collapse, true)
         default_regex = /[^'a-zA-Z0-9]#{"+" if collapse}/
