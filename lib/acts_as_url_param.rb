@@ -113,10 +113,12 @@ module ActsAsUrlParam
     
     module ClassMethods
       def url_param_available?(candidate, id=nil)
-        if proc = acts_as_url_options[:block]
-          !(proc.arity == 1 ? proc.call(candidate) : proc.call(candidate, id))
-        else
-          url_param_available_for_model?(candidate, id)
+        Caring::Scope::State.instance.with_admin_scope(true) do
+          if proc = acts_as_url_options[:block]
+            !(proc.arity == 1 ? proc.call(candidate) : proc.call(candidate, id))
+          else
+            url_param_available_for_model?(candidate, id)
+          end
         end
       end
       
@@ -160,6 +162,7 @@ module ActsAsUrlParam
       
       def set_url_param
         if url_param.blank? or (acts_as_url_options[:on] != :create && !@url_name_manually_set)
+          send(acts_as_url_options[:before]) if acts_as_url_options[:before]
           url = compute_url_param
           send("#{acts_as_url_options[:column]}=", url) unless url.blank?
           @url_name_manually_set = false

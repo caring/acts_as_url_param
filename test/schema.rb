@@ -12,6 +12,7 @@ ActiveRecord::Schema.define() do
   
   create_table :items do |t|
     t.column :name, :string
+    t.column :content, :string
     t.column :type, :string, :default => 'Item', :null => false
     t.column :url_name, :string
   end
