@@ -17,6 +17,7 @@ module Caring
         s = s.downcase if options.fetch(:downcase, true)
         collapse = options.fetch(:collapse, true)
         default_regex = /[^'a-zA-Z0-9]#{"+" if collapse}/
+        s.gsub! /(&amp;)|&/, 'and'
         replacements = options[:replacements] || { options.fetch(:char,"-") => default_regex, "" => /'#{"+" if collapse}/}
         replacements.each do |replacement, regex|
           s = s.gsub(regex,replacement)
