@@ -54,10 +54,10 @@ module Caring
       # Options:
       # => :separator => "-", a string that will be injected between the base string and the uniqifier
       # => :endings => generator, a Generator that provides endings to be placed at the end of the base.
-      #                           defaults to the set of positive integers.
+      #                           defaults to the set of positive integers starting with two.
       def uniquify(base, options = {})
         sep = options.fetch(:separator, "-")
-        endings = options[:endings] || int_generator
+        endings = options[:endings] || int_generator(:start => 2)
         return base if yield base
         while endings.next? do
           candidate = base+sep+endings.next.to_s

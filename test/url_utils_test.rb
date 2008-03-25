@@ -15,9 +15,9 @@ class UrlUtilsTest < Test::Unit::TestCase
   def test_uniquify
     assert_equal "asdf", uniquify("asdf") { |candidate| true }
     i = 0
-    assert_equal "asdf-1", uniquify("asdf") { |candidate| (i = i+1) == 2 }
+    assert_equal "asdf-2", uniquify("asdf") { |candidate| (i = i+1) == 2 }
     i = 0
-    assert_equal "asdf-2", uniquify("asdf") { |candidate| (i = i+1) == 3 }
+    assert_equal "asdf-3", uniquify("asdf") { |candidate| (i = i+1) == 3 }
     assert_raises ArgumentError do
       uniquify("asdf", :endings => Generator.new(%w(a b c))) {|c| false}
     end
