@@ -6,6 +6,7 @@ module ActsAsUrlParam
   module ActMethods
     
     def acts_as_url_param(*args, &block)
+      return unless table_exists?
       extend ClassMethods
       include InstanceMethods
       include Caring::Utilities::UrlUtils
@@ -45,12 +46,12 @@ module ActsAsUrlParam
     private
     
     def make_redirectable
-      has_many :redirects, :as => :redirectable
+      has_many :redirects, :as => :redirectable, :dependent => :destroy
       before_save :add_redirect
       
       class_def :add_redirect do
-        if !new_record? && @name_changed && @old_name
-          redirects.create(:url_name => @old_name)
+        if !new_record? && url_to_field_changed?
+          redirects.create(:url_name => url_to_field_was) unless url_to_field_was.blank?
         end
       end
       
@@ -64,32 +65,43 @@ module ActsAsUrlParam
       meta_def :find_by_url do |*args|
         send("find_by_#{acts_as_url_options[:column]}", *args)
       end
+      send(:named_scope, "with_url", lambda{|url|
+        {:conditions => ["#{acts_as_url_options[:column]} = ?", url]}
+      })
     end
     
     def define_url_param_setter
       class_def "#{acts_as_url_options[:column]}=" do |value|
-        @url_name_manually_set = true if value
-        @old_name = read_attribute(acts_as_url_options[:column]) unless @name_changed
-        write_attribute(acts_as_url_options[:column], url_safe(value))
-        @name_changed = true unless read_attribute(acts_as_url_options[:column]) == @old_name || !@old_name
+        super url_safe(value)
+        # @url_name_manually_set = true if value
+        # @old_name = read_attribute(acts_as_url_options[:column]) unless @name_changed
+        # write_attribute(acts_as_url_options[:column], url_safe(value))
+        # @name_changed = true unless read_attribute(acts_as_url_options[:column]) == @old_name || !@old_name
       end
     end
     
     def define_availability_check
       klass = self
       meta_def :url_param_available_for_model? do |*args|
-        candidate, id = *args
-        conditions = acts_as_url_options[:conditions] + ' AND ' if acts_as_url_options[:conditions]
+        candidate, record = *args
+        id = record && !record.new_record? && record.id
+        if acts_as_url_options[:scope]
+          base = record || self
+          conditions = base.send(:instance_eval, "\"#{acts_as_url_options[:scope]}\"") + ' AND '
+        end
         conditions ||= '' 
         conditions += "#{acts_as_url_options[:column]} = ?"
         conditions += " AND id != ?" if id
+        conditions += " AND type = ? " if acts_as_url_options[:scope] == :type
         conditions = [conditions, candidate]
         conditions << id if id
+        conditions << self.to_s if acts_as_url_options[:scope] == :type
         available = if descends_from_active_record? or self == klass
           count(:conditions => conditions) == 0
         else
           base_class.count(:conditions => conditions) == 0
         end
+        logger.debug("conditions are #{conditions.inspect}")
         if acts_as_url_options[:redirectable] && available
           re_conditions = "url_name = ? AND redirectable_class = ?"
           re_conditions += "AND redirectable_id != ?" if id
@@ -112,18 +124,24 @@ module ActsAsUrlParam
     end
     
     module ClassMethods
-      def url_param_available?(candidate, id=nil)
-        if proc = acts_as_url_options[:block]
-          !(proc.arity == 1 ? proc.call(candidate) : proc.call(candidate, id))
-        else
-          url_param_available_for_model?(candidate, id)
+      def url_param_available?(candidate, record=nil)
+        Caring::Scope::State.instance.with_admin_scope(true) do
+          if proc = acts_as_url_options[:block]
+            if proc.arity == 1
+              proc.call(candidate)
+            else 
+              proc.call(candidate, record)
+            end
+          else
+            url_param_available_for_model?(candidate, record)
+          end
         end
       end
       
-      def compute_url_param(candidate, id=nil)
+      def compute_url_param(candidate, record=nil)
         return if candidate.blank?
         # raise ArgumentError, "The url canidate cannot be empty" if candidate.blank?
-        uniquify_proc = acts_as_url_options[:block] || Proc.new { |candidate| url_param_available? candidate, id }
+        uniquify_proc = acts_as_url_options[:block] || Proc.new { |candidate| url_param_available? candidate, record }
         uniquify(url_safe(candidate), &uniquify_proc)
       end
     end
@@ -131,11 +149,11 @@ module ActsAsUrlParam
     module InstanceMethods
       def compute_url_param
         # raise ArgumentError, "The column used for generating the url_param is empty" unless url_from
-        self.class.compute_url_param(url_from, id)
+        self.class.compute_url_param(url_from, self)
       end
       
       def url_from
-        self.class.method_defined?(acts_as_url_options[:from]) ? send(acts_as_url_options[:from]) : read_attribute(acts_as_url_options[:from])
+        url_from_method? ? send(acts_as_url_options[:from]) : read_attribute(acts_as_url_options[:from])
       end
       
       def to_param
@@ -146,11 +164,34 @@ module ActsAsUrlParam
         read_attribute(acts_as_url_options[:column])
       end
       
+      private
+      
       def empty_param?
         !url_param
       end
       
-      private
+      def update_url?
+        url_to_field_changed? && !url_from_field_changed?
+      end
+
+      def url_to_field_changed?
+        send("#{acts_as_url_options[:column]}_changed?")
+      rescue NoMethodError
+      end
+
+      def url_to_field_was
+        send("#{acts_as_url_options[:column]}_was")
+      end
+
+      def url_from_field_changed?
+        send("#{acts_as_url_options[:from]}_changed?")
+      rescue NoMethodError
+        true
+      end
+      
+      def url_from_method?
+        self.class.method_defined?(acts_as_url_options[:from])
+      end
       
       def set_url_param_if_non_existant
         unless new_record?
@@ -158,20 +199,27 @@ module ActsAsUrlParam
         end
       end
       
+      def set_url_param?
+        url_param.blank? or
+          (url_from_field_changed? && 
+          acts_as_url_options[:on] != :create && 
+          !url_to_field_changed?)
+      end
+      
       def set_url_param
-        if url_param.blank? or (acts_as_url_options[:on] != :create && !@url_name_manually_set)
+        if set_url_param?
           send(acts_as_url_options[:before]) if acts_as_url_options[:before]
           url = compute_url_param
           send("#{acts_as_url_options[:column]}=", url) unless url.blank?
-          @url_name_manually_set = false
           @url_param_validated = true
         end
       end
       
       def validate_with_unique_url
-        return true if @url_param_validated
-        avail_id = new_record? ? nil : id
-        unless self.class.url_param_available? to_param, avail_id
+        if @url_param_validated or (!new_record? && !url_to_field_changed? && !url_from_field_changed?)
+          return true 
+        end
+        unless self.class.url_param_available? to_param, self
           errors.add_to_base "The url is not unique"
         end
         validate_without_unique_url

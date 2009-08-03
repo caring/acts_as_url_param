@@ -11,6 +11,8 @@ require "newspaper"
 require "user"
 require "story"
 require "before_item"
+require "scoped_item"
+require "from_method_item"
 
 class ActsAsUrlParamTest < Test::Unit::TestCase
   
@@ -66,8 +68,8 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
   end
   
   def test_should_use_block_to_check_if_url_param_available
-    ActsAsUrlParam::Story.create(:title => 'new post')
-    assert !ActsAsUrlParam::BlogPost.url_param_available?('new post')
+    ActsAsUrlParam::Story.create!(:title => 'new post')
+    assert !ActsAsUrlParam::BlogPost.url_param_available?('new-post')
   end
   
   def test_should_use_block_to_compute_url_name
@@ -184,6 +186,27 @@ class ActsAsUrlParamTest < Test::Unit::TestCase
   def test_should_run_before_method_before_setting_url
     item = ActsAsUrlParam::BeforeItem.create(:name => 'the name')
     assert_match /is-set/, item.to_param
+  end
+  
+  def test_should_use_scope
+    one = ActsAsUrlParam::ScopedItem.create(:name => 'scoper', :scope_by_id => 23)
+    two = ActsAsUrlParam::ScopedItem.create(:name => 'scoper', :scope_by_id => 24)
+    three = ActsAsUrlParam::ScopedItem.create(:name => 'scoper', :scope_by_id => 24)
+    assert_equal one.url_name, two.url_name
+    assert one.url_name != three.url_name
+  end
+  
+  def test_should_keep_first_url_on_double_save
+    item = ActsAsUrlParam::Item.create(:name => 'boring', :url_name => 'exciting')
+    assert_equal item.to_param, 'exciting'
+    item.content = 'drivel'
+    item.save
+    assert_equal item.to_param, 'exciting'
+  end
+  
+  def test_with_url_from_method
+    i = ActsAsUrlParam::FromMethodItem.create
+    assert_equal i.to_param, i.my_method
   end
   
   private  

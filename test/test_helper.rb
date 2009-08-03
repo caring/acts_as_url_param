@@ -4,6 +4,7 @@
 require 'test/unit'
 rails_env = File.expand_path(File.join(File.dirname(__FILE__), '../../../../config/environment.rb'))
 if File.exist? rails_env
+  ENV["RAILS_ENV"] = "test"
   require rails_env
   require 'active_record/fixtures'
 else

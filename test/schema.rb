@@ -14,6 +14,7 @@ ActiveRecord::Schema.define() do
     t.column :name, :string
     t.column :content, :string
     t.column :type, :string, :default => 'Item', :null => false
+    t.column :scope_by_id, :integer
     t.column :url_name, :string
   end
   
