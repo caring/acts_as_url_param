@@ -125,16 +125,14 @@ module ActsAsUrlParam
     
     module ClassMethods
       def url_param_available?(candidate, record=nil)
-        Caring::Scope::State.instance.with_admin_scope(true) do
-          if proc = acts_as_url_options[:block]
-            if proc.arity == 1
-              proc.call(candidate)
-            else 
-              proc.call(candidate, record)
-            end
+        if proc = acts_as_url_options[:block]
+          if proc.arity == 1
+            proc.call(candidate)
           else
-            url_param_available_for_model?(candidate, record)
+            proc.call(candidate, record)
           end
+        else
+          url_param_available_for_model?(candidate, record)
         end
       end
       
